@@ -5,6 +5,8 @@ This repo, alongside with hundreds of other repos has been affected by mass star
 
 Actual number of GitHub stars on this repo: 84
 
+---
+
 [![Mentioned in Awesome Tauri][]][1]
 
 A productivity app inspired by GitHub Projects Kanban built using [Tauri](https://tauri.app/) and [Svelte](https://svelte.dev/), with a [SQLite](https://www.sqlite.org/) database backend.
