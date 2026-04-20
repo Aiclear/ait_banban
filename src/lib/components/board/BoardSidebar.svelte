@@ -5,8 +5,8 @@
     import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
     import type { Board } from "../../interfaces";
     import {
-        boardsRune,
-        currentBoardId,
+        getBoardsRune,
+        getCurrentBoardId,
         fetchAllBoards,
         createBoard,
         updateBoard,
@@ -16,6 +16,7 @@
         importBoard,
         switchToBoard,
         showToast,
+        setCurrentBoardId,
     } from "../../shared.svelte";
     import Fa from "svelte-fa";
     import {
@@ -46,8 +47,8 @@
         isLoading = true;
         try {
             const boards = await fetchAllBoards();
-            if (boards.length > 0 && !currentBoardId) {
-                currentBoardId = boards[0].id;
+            if (boards.length > 0 && !getCurrentBoardId()) {
+                setCurrentBoardId(boards[0].id);
             }
         } catch (e) {
             console.error("Failed to load boards:", e);
@@ -64,7 +65,7 @@
         }
         try {
             const board = await createBoard(newBoardName.trim());
-            currentBoardId = board.id;
+            setCurrentBoardId(board.id);
             newBoardName = "";
             isCreating = false;
             showToast(toastStore, "看板创建成功");
@@ -109,9 +110,9 @@
                 if (r) {
                     try {
                         await deleteBoard(board.id);
-                        if (currentBoardId === board.id) {
-                            const boards = Object.values(boardsRune);
-                            currentBoardId = boards.length > 0 ? boards[0].id : null;
+                        if (getCurrentBoardId() === board.id) {
+                            const boards = Object.values(getBoardsRune());
+                            setCurrentBoardId(boards.length > 0 ? boards[0].id : null);
                         }
                         showToast(toastStore, "看板删除成功");
                     } catch (e) {
@@ -184,7 +185,7 @@
     async function handleSwitchBoard(boardId: number) {
         try {
             await switchToBoard(boardId);
-            showToast(toastStore, `已切换到"${boardsRune[boardId]?.name}"`);
+            showToast(toastStore, `已切换到"${getBoardsRune()[boardId]?.name}"`);
         } catch (e) {
             console.error("Failed to switch board:", e);
             showToast(toastStore, "切换看板失败");
@@ -230,10 +231,10 @@
     <div class="flex-1 overflow-y-auto">
         {#if isLoading}
             <div class="p-4 text-center text-gray-500">加载中...</div>
-        {:else if Object.keys(boardsRune).length === 0}
+        {:else if Object.keys(getBoardsRune()).length === 0}
             <div class="p-4 text-center text-gray-500">暂无看板</div>
         {:else}
-            {#each Object.values(boardsRune).sort((a, b) => a.id - b.id) as board}
+            {#each Object.values(getBoardsRune()).sort((a, b) => a.id - b.id) as board}
                 {#if editingBoardId === board.id}
                     <div class="p-3 border-b border-gray-100 bg-gray-50">
                         <div class="flex items-center gap-2 mb-2">
@@ -260,7 +261,7 @@
                     </div>
                 {:else}
                     <div
-                        class="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors {currentBoardId === board.id
+                        class="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors {getCurrentBoardId() === board.id
                             ? 'bg-blue-50 border-l-4 border-l-blue-500'
                             : ''}"
                     >
@@ -270,7 +271,7 @@
                         >
                             <span
                                 class="font-medium text-gray-800 truncate flex-1 mr-2"
-                                class:text-blue-600={currentBoardId === board.id}
+                                class:text-blue-600={getCurrentBoardId() === board.id}
                             >
                                 {board.name}
                             </span>
@@ -330,7 +331,7 @@
                     bind:value={newBoardName}
                     class="input input-sm"
                     placeholder="输入看板名称"
-                    on:keydown={(e) => e.key === "Enter" && handleCreateBoard()}
+                    onkeydown={(e) => e.key === "Enter" && handleCreateBoard()}
                 />
                 <div class="flex gap-2">
                     <button onclick={handleCreateBoard} class="btn variant-ghost-success h-9 flex-1">

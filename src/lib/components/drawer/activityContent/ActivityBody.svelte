@@ -10,7 +10,7 @@
         getModalStore,
     } from "@skeletonlabs/skeleton";
     import { fly } from "svelte/transition";
-    import { activitiesRune, showToast } from "../../../shared.svelte";
+    import { getActivitiesRune, showToast } from "../../../shared.svelte";
     import { faCheck, faEraser, faEye, faPen, faPenToSquare, faXmark } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
 
@@ -22,8 +22,8 @@
     }
 
     let { activityId }: Props = $props();
-    console.assert(activitiesRune[activityId] !== undefined, "Selected activity is undefined");
-    const selectedActivity = $derived(activitiesRune[activityId]);
+    console.assert(getActivitiesRune()[activityId] !== undefined, "Selected activity is undefined");
+    const selectedActivity = $derived(getActivitiesRune()[activityId]);
     let displayBody = $derived(selectedActivity.body ?? "");
 
     let isEditMode = $state(false);
@@ -38,7 +38,7 @@
         const trimmedBody = inputBody.trim();
         if (trimmedBody.length === 0) {
             await sync();
-            activitiesRune[activityId].body = "";
+            getActivitiesRune()[activityId].body = "";
             isEditMode = false;
             return;
         }

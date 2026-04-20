@@ -23,13 +23,6 @@
   "plugins": {
     "shell": {
       "open": true
-    },
-    "dialog": {
-      "open": true,
-      "save": true
-    },
-    "fs": {
-      "scope": ["$APP/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$DESKTOP/**"]
     }
   },
   "app": {

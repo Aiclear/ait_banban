@@ -7,7 +7,7 @@
     import { invoke } from "@tauri-apps/api/core";
 
     import { Toast } from "@skeletonlabs/skeleton";
-    import { fetchAll, fetchAllBoards, currentBoardId, boardsRune } from "./lib/shared.svelte";
+    import { fetchAll, fetchAllBoards } from "./lib/shared.svelte";
 
     initializeStores();
 
