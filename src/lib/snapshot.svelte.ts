@@ -140,12 +140,12 @@ function createBoardSnapshot(): BoardSnapshot {
 }
 
 function restoreBoardSnapshot(snapshot: BoardSnapshot): void {
-    categoriesRune = {};
-    categoryTagsRune = {};
-    otherTagsRune = {};
-    activitiesRune = {};
-    columnsRune = {};
-    otherActivitiesRune.inner = {};
+    Object.keys(categoriesRune).forEach((key) => delete categoriesRune[+key]);
+    Object.keys(categoryTagsRune).forEach((key) => delete categoryTagsRune[+key]);
+    Object.keys(otherTagsRune).forEach((key) => delete otherTagsRune[+key]);
+    Object.keys(activitiesRune).forEach((key) => delete activitiesRune[+key]);
+    Object.keys(columnsRune).forEach((key) => delete columnsRune[+key]);
+    Object.keys(otherActivitiesRune.inner).forEach((key) => delete otherActivitiesRune.inner[+key]);
 
     const categoryIds: Record<number, number> = {};
     Object.entries(snapshot.categories).forEach(([categoryId, category]) => {
