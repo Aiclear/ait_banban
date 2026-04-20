@@ -2,7 +2,7 @@
     import BackButton from "../BackButton.svelte";
     import { invoke } from "@tauri-apps/api/core";
     import CategorySettings from "../tag/CategorySettings.svelte";
-    import { categoriesRune } from "../../../shared.svelte";
+    import { getCategoriesRune } from "../../../shared.svelte";
 
     let categoryName: string = $state("");
 
@@ -19,7 +19,7 @@
             ordinal: number;
         } = await invoke("create_category", { name: categoryName });
 
-        categoriesRune[res.id] = {
+        getCategoriesRune()[res.id] = {
             name: res.name,
             tags: [],
             ord: res.ordinal,

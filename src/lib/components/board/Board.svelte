@@ -6,12 +6,24 @@
     import { flip } from "svelte/animate";
     import DebugButton from "../debug/DebugButton.svelte";
     import OtherActivitiesButton from "./OtherActivitiesButton.svelte";
-    import { columnsRune, draggableColumns } from "../../shared.svelte";
+    import {
+        getColumnsRune,
+        draggableColumns,
+        getBoardsRune,
+        getCurrentBoardId,
+    } from "../../shared.svelte";
     import Fa from "svelte-fa";
     import { faPlus, faUpDownLeftRight } from "@fortawesome/free-solid-svg-icons";
 
-    const boardName = "Kanban";
     const flipDurationMs = 300;
+
+    function getBoardName(): string {
+        const currentBoardId = getCurrentBoardId();
+        if (currentBoardId && getBoardsRune()[currentBoardId]) {
+            return getBoardsRune()[currentBoardId].name;
+        }
+        return "Kanban";
+    }
 
     async function createColumn({
         currentTarget,
@@ -21,7 +33,7 @@
         const name = "New column";
         const res: { id: number; name: string; ordinal: number } = await invoke("create_column", { name });
 
-        columnsRune[res.id] = { name, activities: [], ord: Object.entries(columnsRune).length };
+        getColumnsRune()[res.id] = { name, activities: [], ord: Object.entries(getColumnsRune()).length };
 
         setTimeout(() => {
             currentTarget.scrollIntoView({
@@ -55,9 +67,9 @@
         }>,
     ) {
         e.items.forEach(({ id, column }, index) => {
-            const c = columnsRune[id];
+            const c = getColumnsRune()[id];
             c.ord = index;
-            columnsRune[id] = c;
+            getColumnsRune()[id] = c;
         });
 
         const draggedColumnId = +e.info.id;
@@ -76,7 +88,7 @@
     class="flex flex-col w-screen h-screen overflow-auto text-gray-700 bg-gradient-to-tr from-blue-200 via-indigo-200 to-pink-200"
 >
     <div class="px-10 mt-6">
-        <h1 class="text-2xl font-bold">{boardName}</h1>
+        <h1 class="text-2xl font-bold">{getBoardName()}</h1>
         <OtherActivitiesButton />
     </div>
     <div class="flex">

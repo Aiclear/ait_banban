@@ -4,7 +4,9 @@
 #[macro_use]
 extern crate tracing;
 
-use crate::commands::{activity::*, category::*, columns::*, fetch::*, splashscreen::*, tags::*};
+use crate::commands::{
+    activity::*, board::*, category::*, columns::*, fetch::*, splashscreen::*, tags::*,
+};
 use tauri::Manager;
 
 pub mod commands;
@@ -19,6 +21,8 @@ pub fn run() {
     setup::tracing();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             app.manage(setup::get_database_pool(&app));
             info!("Spinning up banban");
@@ -44,7 +48,15 @@ pub fn run() {
             update_tag_color,
             delete_tag,
             close_splashscreen,
-            fetch_all
+            fetch_all,
+            get_all_boards,
+            get_board,
+            create_board,
+            update_board,
+            delete_board,
+            duplicate_board,
+            export_board,
+            import_board
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
