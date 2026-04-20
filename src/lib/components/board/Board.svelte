@@ -6,7 +6,9 @@
     import { flip } from "svelte/animate";
     import DebugButton from "../debug/DebugButton.svelte";
     import OtherActivitiesButton from "./OtherActivitiesButton.svelte";
+    import VersionTimeline from "./VersionTimeline.svelte";
     import { columnsRune, draggableColumns } from "../../shared.svelte";
+    import { snapshotState } from "../../snapshot.svelte";
     import Fa from "svelte-fa";
     import { faPlus, faUpDownLeftRight } from "@fortawesome/free-solid-svg-icons";
 
@@ -74,10 +76,14 @@
 
 <div
     class="flex flex-col w-screen h-screen overflow-auto text-gray-700 bg-gradient-to-tr from-blue-200 via-indigo-200 to-pink-200"
+    class:pt-36={snapshotState.isTimeTravelMode}
 >
+    <VersionTimeline />
     <div class="px-10 mt-6">
-        <h1 class="text-2xl font-bold">{boardName}</h1>
-        <OtherActivitiesButton />
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold">{boardName}</h1>
+            <OtherActivitiesButton />
+        </div>
     </div>
     <div class="flex">
         <section
