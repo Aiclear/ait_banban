@@ -6,3 +6,4 @@ pub mod categories;
 pub mod category_tags;
 pub mod columns;
 pub mod prelude;
+pub mod snapshots;

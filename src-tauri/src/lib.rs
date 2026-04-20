@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate tracing;
 
-use crate::commands::{activity::*, category::*, columns::*, fetch::*, splashscreen::*, tags::*};
+use crate::commands::{activity::*, category::*, columns::*, fetch::*, snapshot::*, splashscreen::*, tags::*};
 use tauri::Manager;
 
 pub mod commands;
@@ -44,7 +44,12 @@ pub fn run() {
             update_tag_color,
             delete_tag,
             close_splashscreen,
-            fetch_all
+            fetch_all,
+            create_snapshot,
+            get_all_snapshots,
+            get_snapshot,
+            delete_snapshot,
+            get_snapshot_count
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
