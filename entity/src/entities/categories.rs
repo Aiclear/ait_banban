@@ -11,17 +11,32 @@ pub struct Model {
     pub id: i32,
     pub name: String,
     pub ordinal: i32,
+    pub board_id: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::category_tags::Entity")]
     CategoryTags,
+    #[sea_orm(
+        belongs_to = "super::boards::Entity",
+        from = "Column::BoardId",
+        to = "super::boards::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    Boards,
 }
 
 impl Related<super::category_tags::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::CategoryTags.def()
+    }
+}
+
+impl Related<super::boards::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Boards.def()
     }
 }
 

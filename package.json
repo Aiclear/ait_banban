@@ -17,6 +17,8 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "~2.2.0",
+    "@tauri-apps/plugin-fs": "~2.2.0",
     "@tauri-apps/plugin-shell": "~2.2.0",
     "svelte-dnd-action": "^0.9.57",
     "svelte-fa": "^4.0.3"
