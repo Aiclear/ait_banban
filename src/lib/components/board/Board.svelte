@@ -7,10 +7,10 @@
     import DebugButton from "../debug/DebugButton.svelte";
     import OtherActivitiesButton from "./OtherActivitiesButton.svelte";
     import {
-        columnsRune,
+        getColumnsRune,
         draggableColumns,
-        boardsRune,
-        currentBoardId,
+        getBoardsRune,
+        getCurrentBoardId,
     } from "../../shared.svelte";
     import Fa from "svelte-fa";
     import { faPlus, faUpDownLeftRight } from "@fortawesome/free-solid-svg-icons";
@@ -18,8 +18,9 @@
     const flipDurationMs = 300;
 
     function getBoardName(): string {
-        if (currentBoardId && boardsRune[currentBoardId]) {
-            return boardsRune[currentBoardId].name;
+        const currentBoardId = getCurrentBoardId();
+        if (currentBoardId && getBoardsRune()[currentBoardId]) {
+            return getBoardsRune()[currentBoardId].name;
         }
         return "Kanban";
     }
@@ -32,7 +33,7 @@
         const name = "New column";
         const res: { id: number; name: string; ordinal: number } = await invoke("create_column", { name });
 
-        columnsRune[res.id] = { name, activities: [], ord: Object.entries(columnsRune).length };
+        getColumnsRune()[res.id] = { name, activities: [], ord: Object.entries(getColumnsRune()).length };
 
         setTimeout(() => {
             currentTarget.scrollIntoView({
@@ -66,9 +67,9 @@
         }>,
     ) {
         e.items.forEach(({ id, column }, index) => {
-            const c = columnsRune[id];
+            const c = getColumnsRune()[id];
             c.ord = index;
-            columnsRune[id] = c;
+            getColumnsRune()[id] = c;
         });
 
         const draggedColumnId = +e.info.id;

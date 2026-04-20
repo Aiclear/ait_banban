@@ -35,6 +35,7 @@
         "width": 1280,
         "height": 800,
         "visible": false,
+        "label": "main",
         "useHttpsScheme": true
       },
       {

@@ -7,14 +7,26 @@
     import { invoke } from "@tauri-apps/api/core";
 
     import { Toast } from "@skeletonlabs/skeleton";
-    import { fetchAll, fetchAllBoards } from "./lib/shared.svelte";
+    import { fetchAll, fetchAllBoards, setCurrentBoardId } from "./lib/shared.svelte";
 
     initializeStores();
 
     onMount(async () => {
-        await fetchAllBoards();
-        await fetchAll();
-        await invoke("close_splashscreen");
+        try {
+            const boards = await fetchAllBoards();
+            if (boards.length > 0) {
+                setCurrentBoardId(boards[0].id);
+            }
+            await fetchAll();
+        } catch (e) {
+            console.error("Failed to initialize data:", e);
+        } finally {
+            try {
+                await invoke("close_splashscreen");
+            } catch (e) {
+                console.error("Failed to close splashscreen:", e);
+            }
+        }
     });
 </script>
 
