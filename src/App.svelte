@@ -7,11 +7,13 @@
 
     import { Toast } from "@skeletonlabs/skeleton";
     import { fetchAll } from "./lib/shared.svelte";
+    import { initSnapshotSystem } from "./lib/snapshot.svelte";
 
     initializeStores();
 
     onMount(async () => {
         await fetchAll();
+        initSnapshotSystem();
         await invoke("close_splashscreen");
     });
 </script>
