@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Activity, AppState, Category, Column, Tag } from "./interfaces";
+import type { Activity, AppState, Board, Category, Column, Tag } from "./interfaces";
 import { getToastStore, type ToastSettings, type ToastStore } from "@skeletonlabs/skeleton";
 
 export const appState: AppState = $state({
@@ -10,6 +10,9 @@ export const appState: AppState = $state({
     hoverColumnId: null,
 });
 
+export const boardsRune: Record<number, Board> = $state({});
+export const currentBoardId: number | null = $state(null);
+
 export const categoriesRune: Record<number, Category> = $state({});
 export const categoryTagsRune: Record<number, Tag & { categoryId: number }> = $state({});
 export const otherTagsRune: Record<number, Tag> = $state({});
@@ -18,9 +21,6 @@ export const columnsRune: Record<number, Column> = $state({});
 export const otherActivitiesRune: { inner: Record<number, Activity> } = $state({ inner: {} });
 
 class IdTags {
-    // we need both reactivity and functioning drag and drop at once.
-    // $derived() rune on idTags confuses the drag and drop library.
-    // $state() without explicit update is non-reactive.
     inner: { id: number; tag: Tag & { categoryId: number } }[][] = $state([]);
 
     update = () => {
@@ -200,4 +200,79 @@ export async function fetchAll() {
     Object.entries(res.otherActivities).forEach(([activityId, activity]) => {
         otherActivitiesRune.inner[+activityId] = activity;
     });
+}
+
+export async function fetchAllBoards(): Promise<Board[]> {
+    const boards = (await invoke("get_all_boards")) as Board[];
+    boardsRune = {};
+    boards.forEach((board) => {
+        boardsRune[board.id] = board;
+    });
+    return boards;
+}
+
+export async function createBoard(name: string): Promise<Board> {
+    const board = (await invoke("create_board", { data: { name } })) as Board;
+    boardsRune[board.id] = board;
+    return board;
+}
+
+export async function updateBoard(id: number, name: string): Promise<Board> {
+    const board = (await invoke("update_board", { data: { id, name } })) as Board;
+    boardsRune[board.id] = board;
+    return board;
+}
+
+export async function deleteBoard(id: number): Promise<void> {
+    await invoke("delete_board", { id });
+    delete boardsRune[id];
+}
+
+export async function duplicateBoard(sourceId: number, newName: string): Promise<Board> {
+    const board = (await invoke("duplicate_board", { sourceId, newName })) as Board;
+    boardsRune[board.id] = board;
+    return board;
+}
+
+export async function exportBoard(boardId: number) {
+    const data = await invoke("export_board", { boardId });
+    return JSON.stringify(data, null, 2);
+}
+
+export async function importBoard(
+    name: string,
+    jsonString: string
+): Promise<Board> {
+    const data = JSON.parse(jsonString);
+    data.name = name;
+    const board = (await invoke("import_board", { data })) as Board;
+    boardsRune[board.id] = board;
+    return board;
+}
+
+export function clearCurrentBoardData() {
+    categoriesRune = {};
+    categoryTagsRune = {};
+    otherTagsRune = {};
+    activitiesRune = {};
+    columnsRune = {};
+    otherActivitiesRune.inner = {};
+    draggableColumns.inner = [];
+    draggableActivities.inner = {};
+    draggableOtherActivities.inner = [];
+    idTags.inner = [];
+    idOtherTags.inner = [];
+}
+
+export async function switchToBoard(boardId: number) {
+    clearCurrentBoardData();
+    currentBoardId = boardId;
+    await fetchAll();
+}
+
+export function getCurrentBoardName(): string {
+    if (currentBoardId && boardsRune[currentBoardId]) {
+        return boardsRune[currentBoardId].name;
+    }
+    return "Kanban";
 }
