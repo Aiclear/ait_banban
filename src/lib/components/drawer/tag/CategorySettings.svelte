@@ -1,6 +1,6 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { categoriesRune, idOtherTags, idTags, otherTagsRune } from "../../../shared.svelte";
+    import { getCategoriesRune, getOtherTagsRune, idOtherTags, idTags } from "../../../shared.svelte";
     import type { Tag } from "../../../interfaces";
     import Category from "./Category.svelte";
 
@@ -10,7 +10,7 @@
 
 <h2 class="h2">Tag options</h2>
 
-{#each Object.entries(categoriesRune).sort(([_1, catA], [_2, catB]) => {
+{#each Object.entries(getCategoriesRune()).sort(([_1, catA], [_2, catB]) => {
     return catA.ord - catB.ord;
 }) as [categoryId, category], categoryIdx}
     <Category categoryData={{ id: +categoryId, name: category.name, idx: categoryIdx, tags: category.tags }} />

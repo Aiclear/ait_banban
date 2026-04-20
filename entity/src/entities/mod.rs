@@ -2,6 +2,7 @@
 
 pub mod activities;
 pub mod activity_tags;
+pub mod boards;
 pub mod categories;
 pub mod category_tags;
 pub mod columns;

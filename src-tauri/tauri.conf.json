@@ -3,7 +3,7 @@
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420"
+    "devUrl": "http://localhost:1430"
   },
   "bundle": {
     "active": true,
@@ -20,7 +20,11 @@
   "mainBinaryName": "banban",
   "version": "0.2.0",
   "identifier": "com.banban.dev",
-  "plugins": {},
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  },
   "app": {
     "withGlobalTauri": false,
     "windows": [
@@ -30,18 +34,8 @@
         "resizable": true,
         "width": 1280,
         "height": 800,
-        "visible": false,
-        "useHttpsScheme": true
-      },
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "width": 1280,
-        "height": 800,
-        "decorations": false,
-        "url": "splashscreen.html",
-        "label": "splashscreen",
-        "useHttpsScheme": true
+        "visible": true,
+        "label": "main"
       }
     ],
     "security": {

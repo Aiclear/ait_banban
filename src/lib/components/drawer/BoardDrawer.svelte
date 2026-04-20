@@ -5,15 +5,15 @@
     import SettingsDrawer from "./settings/SettingsDrawer.svelte";
     import BaseDrawer from "./BaseDrawer.svelte";
     import OtherColumn from "./OtherColumn.svelte";
-    import { activitiesRune, appState } from "../../shared.svelte";
+    import { getActivitiesRune, appState } from "../../shared.svelte";
 
     const drawerStore = getDrawerStore();
 </script>
 
 <Drawer position="right">
     {#if $drawerStore.id === DrawerTab.Activity}
-        {#if appState.selectedActivity && activitiesRune[appState.selectedActivity]}
-            <BaseDrawer name={activitiesRune[appState.selectedActivity].name}>
+        {#if appState.selectedActivity && getActivitiesRune()[appState.selectedActivity]}
+            <BaseDrawer name={getActivitiesRune()[appState.selectedActivity].name}>
                 <ActivityDrawer activityId={appState.selectedActivity} />
             </BaseDrawer>
         {:else}

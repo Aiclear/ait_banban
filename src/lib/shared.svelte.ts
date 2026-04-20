@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Activity, AppState, Category, Column, Tag } from "./interfaces";
+import type { Activity, AppState, Board, Category, Column, Tag } from "./interfaces";
 import { getToastStore, type ToastSettings, type ToastStore } from "@skeletonlabs/skeleton";
+
+function clearObject<T extends Record<number, any>>(obj: T): void {
+    for (const key of Object.keys(obj)) {
+        delete obj[+key];
+    }
+}
 
 export const appState: AppState = $state({
     isDebug: false,
@@ -10,24 +16,52 @@ export const appState: AppState = $state({
     hoverColumnId: null,
 });
 
-export const categoriesRune: Record<number, Category> = $state({});
-export const categoryTagsRune: Record<number, Tag & { categoryId: number }> = $state({});
-export const otherTagsRune: Record<number, Tag> = $state({});
-export const activitiesRune: Record<number, Activity> = $state({});
-export const columnsRune: Record<number, Column> = $state({});
+const _boardsRune: Record<number, Board> = $state({});
+let _currentBoardId: number | null = $state(null);
+
+const _categoriesRune: Record<number, Category> = $state({});
+const _categoryTagsRune: Record<number, Tag & { categoryId: number }> = $state({});
+const _otherTagsRune: Record<number, Tag> = $state({});
+const _activitiesRune: Record<number, Activity> = $state({});
+const _columnsRune: Record<number, Column> = $state({});
 export const otherActivitiesRune: { inner: Record<number, Activity> } = $state({ inner: {} });
 
+export function getBoardsRune(): Record<number, Board> {
+    return _boardsRune;
+}
+
+export function getCurrentBoardId(): number | null {
+    return _currentBoardId;
+}
+
+export function getCategoriesRune(): Record<number, Category> {
+    return _categoriesRune;
+}
+
+export function getCategoryTagsRune(): Record<number, Tag & { categoryId: number }> {
+    return _categoryTagsRune;
+}
+
+export function getOtherTagsRune(): Record<number, Tag> {
+    return _otherTagsRune;
+}
+
+export function getActivitiesRune(): Record<number, Activity> {
+    return _activitiesRune;
+}
+
+export function getColumnsRune(): Record<number, Column> {
+    return _columnsRune;
+}
+
 class IdTags {
-    // we need both reactivity and functioning drag and drop at once.
-    // $derived() rune on idTags confuses the drag and drop library.
-    // $state() without explicit update is non-reactive.
     inner: { id: number; tag: Tag & { categoryId: number } }[][] = $state([]);
 
     update = () => {
-        this.inner = Object.entries(categoriesRune).map(([categoryId, category]) => {
+        this.inner = Object.entries(_categoriesRune).map(([categoryId, category]) => {
             return category.tags
                 .map((tagId) => {
-                    const tag = categoryTagsRune[tagId];
+                    const tag = _categoryTagsRune[tagId];
                     console.assert(tag !== undefined, "Category tag not found");
                     return { id: tagId, tag };
                 })
@@ -42,7 +76,7 @@ class IdOtherTags {
     inner: { id: number; tag: Tag }[] = $state([]);
 
     update = () => {
-        this.inner = Object.entries(otherTagsRune)
+        this.inner = Object.entries(_otherTagsRune)
             .map(([id, tag]) => {
                 return { id: +id, tag };
             })
@@ -56,7 +90,7 @@ export class DraggableColumns {
     inner: { id: number; columnId: number; column: Column }[] = $state([]);
 
     update = () => {
-        this.inner = Object.entries(columnsRune)
+        this.inner = Object.entries(_columnsRune)
             .map(([id, column]) => {
                 return { id: +id, columnId: +id, column };
             })
@@ -70,9 +104,9 @@ export class DraggableActivities {
     inner: Record<number, { id: number; colId: number; activity: Activity }[]> = $state({});
 
     update = (columnId: number) => {
-        this.inner[columnId] = columnsRune[columnId].activities
+        this.inner[columnId] = _columnsRune[columnId].activities
             .map((activityId) => {
-                return { id: +activityId, colId: columnId, activity: activitiesRune[+activityId] };
+                return { id: +activityId, colId: columnId, activity: _activitiesRune[+activityId] };
             })
             .sort((activity1, activity2) => {
                 return activity1.activity.ordinal - activity2.activity.ordinal;
@@ -97,21 +131,21 @@ export const draggableActivities = new DraggableActivities();
 export const draggableOtherActivities = new DraggableOtherActivities();
 
 export async function changeCategoryTagColor(newColor: string, tagId: number) {
-    const tag = categoryTagsRune[tagId];
+    const tag = _categoryTagsRune[tagId];
     await invoke("update_tag_color", {
         data: { categoryTagId: tagId, color: newColor.slice(1) },
     });
     tag.color = newColor;
-    categoryTagsRune[tagId] = tag;
+    _categoryTagsRune[tagId] = tag;
 }
 
 export async function changeOtherTagColor(newColor: string, tagId: number) {
-    const tag = otherTagsRune[tagId];
+    const tag = _otherTagsRune[tagId];
     await invoke("update_tag_color", {
         data: { categoryTagId: tagId, color: newColor.slice(1) },
     });
     tag.color = newColor;
-    otherTagsRune[tagId] = tag;
+    _otherTagsRune[tagId] = tag;
 }
 
 export function showToast(toastStore: ToastStore, content: string) {
@@ -174,30 +208,109 @@ export async function fetchAll() {
 
     Object.entries(res.categories).forEach(([categoryId, category]) => {
         console.log(categoryId);
-        categoriesRune[+categoryId] = { ...category, ord: category.ordinal };
+        _categoriesRune[+categoryId] = { ...category, ord: category.ordinal };
         category.tags.forEach((tagId) => {
             categoryIds[tagId] = +categoryId;
         });
     });
 
     Object.entries(res.categoryTags).forEach(([tagId, tag]) => {
-        categoryTagsRune[+tagId] = { ...tag, ord: tag.ordinal, categoryId: categoryIds[+tagId] };
+        _categoryTagsRune[+tagId] = { ...tag, ord: tag.ordinal, categoryId: categoryIds[+tagId] };
     });
 
     Object.entries(res.otherTags).forEach(([tagId, tag]) => {
-        otherTagsRune[+tagId] = { ...tag, ord: tag.ordinal };
+        _otherTagsRune[+tagId] = { ...tag, ord: tag.ordinal };
     });
 
     Object.entries(res.columns).forEach(([columnId, column]) => {
-        columnsRune[+columnId] = { ...column, ord: column.ordinal };
+        _columnsRune[+columnId] = { ...column, ord: column.ordinal };
     });
     draggableColumns.update();
 
     Object.entries(res.activities).forEach(([activityId, activity]) => {
-        activitiesRune[+activityId] = activity;
+        _activitiesRune[+activityId] = activity;
     });
 
     Object.entries(res.otherActivities).forEach(([activityId, activity]) => {
         otherActivitiesRune.inner[+activityId] = activity;
     });
+}
+
+export async function fetchAllBoards(): Promise<Board[]> {
+    const boards = (await invoke("get_all_boards")) as Board[];
+    clearObject(_boardsRune);
+    boards.forEach((board) => {
+        _boardsRune[board.id] = board;
+    });
+    return boards;
+}
+
+export async function createBoard(name: string): Promise<Board> {
+    const board = (await invoke("create_board", { data: { name } })) as Board;
+    _boardsRune[board.id] = board;
+    return board;
+}
+
+export async function updateBoard(id: number, name: string): Promise<Board> {
+    const board = (await invoke("update_board", { data: { id, name } })) as Board;
+    _boardsRune[board.id] = board;
+    return board;
+}
+
+export async function deleteBoard(id: number): Promise<void> {
+    await invoke("delete_board", { id });
+    delete _boardsRune[id];
+}
+
+export async function duplicateBoard(sourceId: number, newName: string): Promise<Board> {
+    const board = (await invoke("duplicate_board", { sourceId, newName })) as Board;
+    _boardsRune[board.id] = board;
+    return board;
+}
+
+export async function exportBoard(boardId: number) {
+    const data = await invoke("export_board", { boardId });
+    return JSON.stringify(data, null, 2);
+}
+
+export async function importBoard(
+    name: string,
+    jsonString: string
+): Promise<Board> {
+    const data = JSON.parse(jsonString);
+    data.name = name;
+    const board = (await invoke("import_board", { data })) as Board;
+    _boardsRune[board.id] = board;
+    return board;
+}
+
+export function clearCurrentBoardData() {
+    clearObject(_categoriesRune);
+    clearObject(_categoryTagsRune);
+    clearObject(_otherTagsRune);
+    clearObject(_activitiesRune);
+    clearObject(_columnsRune);
+    otherActivitiesRune.inner = {};
+    draggableColumns.inner = [];
+    draggableActivities.inner = {};
+    draggableOtherActivities.inner = [];
+    idTags.inner = [];
+    idOtherTags.inner = [];
+}
+
+export function setCurrentBoardId(id: number | null) {
+    _currentBoardId = id;
+}
+
+export async function switchToBoard(boardId: number) {
+    clearCurrentBoardData();
+    _currentBoardId = boardId;
+    await fetchAll();
+}
+
+export function getCurrentBoardName(): string {
+    if (_currentBoardId && _boardsRune[_currentBoardId]) {
+        return _boardsRune[_currentBoardId].name;
+    }
+    return "Kanban";
 }
