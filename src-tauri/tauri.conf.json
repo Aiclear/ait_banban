@@ -3,7 +3,7 @@
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420"
+    "devUrl": "http://localhost:1430"
   },
   "bundle": {
     "active": true,
@@ -20,7 +20,18 @@
   "mainBinaryName": "banban",
   "version": "0.2.0",
   "identifier": "com.banban.dev",
-  "plugins": {},
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "dialog": {
+      "open": true,
+      "save": true
+    },
+    "fs": {
+      "scope": ["$APP/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$DESKTOP/**"]
+    }
+  },
   "app": {
     "withGlobalTauri": false,
     "windows": [
