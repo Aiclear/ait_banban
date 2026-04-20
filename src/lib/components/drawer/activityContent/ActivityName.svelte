@@ -2,7 +2,7 @@
     import { invoke } from "@tauri-apps/api/core";
     import { getToastStore } from "@skeletonlabs/skeleton";
     import { tick } from "svelte";
-    import { activitiesRune, showToast } from "../../../shared.svelte";
+    import { getActivitiesRune, showToast } from "../../../shared.svelte";
     import { faCheck, faPen, faXmark } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
 
@@ -11,8 +11,8 @@
     }
 
     const { activityId }: Props = $props();
-    console.assert(activitiesRune[activityId] !== undefined, "Selected activity is undefined");
-    const selectedActivity = $derived(activitiesRune[activityId]);
+    console.assert(getActivitiesRune()[activityId] !== undefined, "Selected activity is undefined");
+    const selectedActivity = $derived(getActivitiesRune()[activityId]);
     let displayName = $derived(selectedActivity.name);
 
     const toastStore = getToastStore();

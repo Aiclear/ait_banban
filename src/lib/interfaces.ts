@@ -23,6 +23,13 @@ export interface Category {
     ord: number;
 }
 
+export interface Board {
+    id: number;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface Editable {
     id: number;
     field: ActiveField;
