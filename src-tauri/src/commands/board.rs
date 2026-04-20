@@ -67,7 +67,7 @@ pub struct ColumnActivityExport {
     pub body: Option<String>,
     pub ordinal: i32,
     pub tags: Vec<i32>,
-    pub column_id: Option<i32>,
+    pub column_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

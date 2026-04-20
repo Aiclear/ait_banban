@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use crate::{
     commands::board::{
-        CreateBoardInput, ExportBoardOutput, ImportBoardInput, UpdateBoardInput,
+        ColumnActivityExport, ColumnExport, CreateBoardInput, CategoryExport, CategoryTagExport,
+        ExportBoardOutput, ActivityExport, ImportBoardInput, OtherTagExport, UpdateBoardInput,
     },
     errors::AppError,
-    utils::coloring::string_to_rgb_int,
+    utils::coloring::rgb_string_to_int,
 };
 use anyhow::Context;
 use entity::{
@@ -21,7 +22,6 @@ use sea_orm::{
 pub struct Query;
 
 impl Query {
-    /// Fetches all boards.
     pub async fn all_boards(db: &DbConn) -> Result<Vec<BoardModel>, AppError> {
         let res = Board::find()
             .all(db)
@@ -30,7 +30,6 @@ impl Query {
         Ok(res)
     }
 
-    /// Fetches a board by id.
     pub async fn get_board_by_id(db: &DbConn, id: i32) -> Result<BoardModel, AppError> {
         let res = Board::find_by_id(id)
             .one(db)
@@ -40,7 +39,6 @@ impl Query {
         Ok(res)
     }
 
-    /// Exports a board's data as JSON.
     pub async fn export_board(db: &DbConn, board_id: i32) -> Result<ExportBoardOutput, AppError> {
         let board = Self::get_board_by_id(db, board_id).await?;
 
@@ -64,15 +62,15 @@ impl Query {
             .await
             .context("failed to fetch other activities for export")?;
 
-        let mut columns = HashMap::new();
-        let mut activities = HashMap::new();
-        let mut other_activities_map = HashMap::new();
+        let mut columns: HashMap<i32, ColumnExport> = HashMap::new();
+        let mut activities_map: HashMap<i32, ColumnActivityExport> = HashMap::new();
+        let mut other_activities_map: HashMap<i32, ActivityExport> = HashMap::new();
 
         for (column, col_activities) in columns_data {
             let activity_ids: Vec<i32> = col_activities.iter().map(|a| a.id).collect();
             columns.insert(
                 column.id,
-                crate::commands::fetch::ColumnOutput {
+                ColumnExport {
                     name: column.name,
                     ordinal: column.ordinal,
                     activities: activity_ids,
@@ -80,9 +78,9 @@ impl Query {
             );
 
             for activity in col_activities {
-                activities.insert(
+                activities_map.insert(
                     activity.id,
-                    crate::commands::fetch::ColumnActivityOutput {
+                    ColumnActivityExport {
                         name: activity.name,
                         body: activity.body,
                         ordinal: activity.ordinal,
@@ -96,7 +94,7 @@ impl Query {
         for activity in other_activities {
             other_activities_map.insert(
                 activity.id,
-                crate::commands::fetch::ActivityOutput {
+                ActivityExport {
                     name: activity.name,
                     body: activity.body,
                     ordinal: activity.ordinal,
@@ -105,14 +103,14 @@ impl Query {
             );
         }
 
-        let mut categories = HashMap::new();
-        let mut category_tags_map = HashMap::new();
+        let mut categories: HashMap<i32, CategoryExport> = HashMap::new();
+        let mut category_tags_map: HashMap<i32, CategoryTagExport> = HashMap::new();
 
         for (category, tags) in categories_data {
             let tag_ids: Vec<i32> = tags.iter().map(|t| t.id).collect();
             categories.insert(
                 category.id,
-                crate::commands::fetch::CategoryOutput {
+                CategoryExport {
                     name: category.name,
                     ordinal: category.ordinal,
                     tags: tag_ids,
@@ -122,7 +120,7 @@ impl Query {
             for tag in tags {
                 category_tags_map.insert(
                     tag.id,
-                    crate::commands::fetch::CategoryTagOutput {
+                    CategoryTagExport {
                         name: tag.tag_name,
                         color: crate::utils::coloring::rgb_int_to_string(tag.color),
                         ordinal: tag.ordinal,
@@ -135,7 +133,7 @@ impl Query {
         Ok(ExportBoardOutput {
             name: board.name,
             columns,
-            activities,
+            activities: activities_map,
             other_activities: other_activities_map,
             categories,
             category_tags: category_tags_map,
@@ -147,7 +145,6 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
-    /// Creates a new board.
     pub async fn create_board(db: &DbConn, data: CreateBoardInput) -> Result<BoardModel, AppError> {
         let now = chrono::Utc::now().to_rfc3339();
         let model = boards::ActiveModel {
@@ -160,7 +157,6 @@ impl Mutation {
         Ok(model)
     }
 
-    /// Updates a board.
     pub async fn update_board(db: &DbConn, data: UpdateBoardInput) -> Result<BoardModel, AppError> {
         let mut model = Board::find_by_id(data.id)
             .one(db)
@@ -178,37 +174,42 @@ impl Mutation {
         Ok(model)
     }
 
-    /// Deletes a board.
     pub async fn delete_board(db: &DbConn, board_id: i32) -> Result<(), AppError> {
         let tr = db.begin().await.context("failed to begin transaction")?;
 
-        activities::Entity::delete_many()
-            .filter(
-                activities::Column::ColumnId.in_subquery(
-                    columns::Entity::find()
-                        .select_only()
-                        .column(columns::Column::Id)
-                        .filter(columns::Column::BoardId.eq(board_id))
-                        .into_query(),
-                ),
-            )
-            .exec(&tr)
+        let column_ids = columns::Entity::find()
+            .filter(columns::Column::BoardId.eq(board_id))
+            .all(&tr)
             .await
-            .context("failed to delete activities")?;
+            .context("failed to get column ids")?
+            .iter()
+            .map(|c| c.id)
+            .collect::<Vec<i32>>();
 
-        category_tags::Entity::delete_many()
-            .filter(
-                category_tags::Column::CategoryId.in_subquery(
-                    categories::Entity::find()
-                        .select_only()
-                        .column(categories::Column::Id)
-                        .filter(categories::Column::BoardId.eq(board_id))
-                        .into_query(),
-                ),
-            )
-            .exec(&tr)
+        let category_ids = categories::Entity::find()
+            .filter(categories::Column::BoardId.eq(board_id))
+            .all(&tr)
             .await
-            .context("failed to delete category tags")?;
+            .context("failed to get category ids")?
+            .iter()
+            .map(|c| c.id)
+            .collect::<Vec<i32>>();
+
+        if !column_ids.is_empty() {
+            activities::Entity::delete_many()
+                .filter(activities::Column::ColumnId.is_in(column_ids))
+                .exec(&tr)
+                .await
+                .context("failed to delete activities")?;
+        }
+
+        if !category_ids.is_empty() {
+            category_tags::Entity::delete_many()
+                .filter(category_tags::Column::CategoryId.is_in(category_ids))
+                .exec(&tr)
+                .await
+                .context("failed to delete category tags")?;
+        }
 
         columns::Entity::delete_many()
             .filter(columns::Column::BoardId.eq(board_id))
@@ -232,7 +233,6 @@ impl Mutation {
         Ok(())
     }
 
-    /// Duplicates a board.
     pub async fn duplicate_board(db: &DbConn, source_board_id: i32, new_name: String) -> Result<BoardModel, AppError> {
         let exported = Query::export_board(db, source_board_id).await?;
 
@@ -254,30 +254,26 @@ impl Mutation {
         let mut category_id_map: HashMap<i32, i32> = HashMap::new();
         let mut tag_id_map: HashMap<i32, i32> = HashMap::new();
 
-        for (_, category) in exported.categories {
+        for (cat_id, category) in &exported.categories {
             let model = categories::ActiveModel {
-                name: Set(category.name),
+                name: Set(category.name.clone()),
                 ordinal: Set(category.ordinal),
                 board_id: Set(Some(new_board.id)),
                 ..Default::default()
             };
             let inserted = model.insert(&tr).await.context("failed to insert category")?;
-            category_id_map.insert(
-                exported
-                    .categories
-                    .iter()
-                    .find(|(_, c)| c.name == category.name && c.ordinal == category.ordinal)
-                    .map(|(id, _)| *id)
-                    .unwrap_or(0),
-                inserted.id,
-            );
+            category_id_map.insert(*cat_id, inserted.id);
         }
 
-        for (tag_id, tag) in exported.category_tags {
+        for (tag_id, tag) in &exported.category_tags {
             let new_category_id = category_id_map.get(&tag.category_id).copied();
+            let color_value = match rgb_string_to_int(&tag.color) {
+                Ok(c) => c,
+                Err(_) => 0,
+            };
             let model = category_tags::ActiveModel {
-                tag_name: Set(tag.name),
-                color: Set(string_to_rgb_int(&tag.color)),
+                tag_name: Set(tag.name.clone()),
+                color: Set(color_value),
                 ordinal: Set(tag.ordinal),
                 category_id: Set(new_category_id),
                 ..Default::default()
@@ -286,30 +282,22 @@ impl Mutation {
             tag_id_map.insert(*tag_id, inserted.id);
         }
 
-        for (_, column) in exported.columns {
+        for (col_id, column) in &exported.columns {
             let model = columns::ActiveModel {
-                name: Set(column.name),
+                name: Set(column.name.clone()),
                 ordinal: Set(column.ordinal),
                 board_id: Set(Some(new_board.id)),
                 ..Default::default()
             };
             let inserted = model.insert(&tr).await.context("failed to insert column")?;
-            column_id_map.insert(
-                exported
-                    .columns
-                    .iter()
-                    .find(|(_, c)| c.name == column.name && c.ordinal == column.ordinal)
-                    .map(|(id, _)| *id)
-                    .unwrap_or(0),
-                inserted.id,
-            );
+            column_id_map.insert(*col_id, inserted.id);
         }
 
-        for (_, activity) in exported.activities {
-            let new_column_id = activity.column_id.and_then(|id| column_id_map.get(&id).copied());
+        for (_, activity) in &exported.activities {
+            let new_column_id = column_id_map.get(&activity.column_id).copied();
             let model = activities::ActiveModel {
-                name: Set(activity.name),
-                body: Set(activity.body),
+                name: Set(activity.name.clone()),
+                body: Set(activity.body.clone()),
                 column_id: Set(new_column_id),
                 ordinal: Set(activity.ordinal),
                 ..Default::default()
@@ -317,10 +305,10 @@ impl Mutation {
             model.insert(&tr).await.context("failed to insert activity")?;
         }
 
-        for (_, activity) in exported.other_activities {
+        for (_, activity) in &exported.other_activities {
             let model = activities::ActiveModel {
-                name: Set(activity.name),
-                body: Set(activity.body),
+                name: Set(activity.name.clone()),
+                body: Set(activity.body.clone()),
                 column_id: Set(None),
                 ordinal: Set(activity.ordinal),
                 ..Default::default()
@@ -333,7 +321,6 @@ impl Mutation {
         Ok(new_board)
     }
 
-    /// Imports a board from JSON.
     pub async fn import_board(db: &DbConn, data: ImportBoardInput) -> Result<BoardModel, AppError> {
         let new_board = Self::create_board(
             db,
@@ -353,9 +340,9 @@ impl Mutation {
         let mut category_id_map: HashMap<i32, i32> = HashMap::new();
         let mut tag_id_map: HashMap<i32, i32> = HashMap::new();
 
-        for (orig_id, category) in data.categories {
+        for (orig_id, category) in &data.categories {
             let model = categories::ActiveModel {
-                name: Set(category.name),
+                name: Set(category.name.clone()),
                 ordinal: Set(category.ordinal),
                 board_id: Set(Some(new_board.id)),
                 ..Default::default()
@@ -364,11 +351,15 @@ impl Mutation {
             category_id_map.insert(*orig_id, inserted.id);
         }
 
-        for (orig_tag_id, tag) in data.category_tags {
+        for (orig_tag_id, tag) in &data.category_tags {
             let new_category_id = category_id_map.get(&tag.category_id).copied();
+            let color_value = match rgb_string_to_int(&tag.color) {
+                Ok(c) => c,
+                Err(_) => 0,
+            };
             let model = category_tags::ActiveModel {
-                tag_name: Set(tag.name),
-                color: Set(string_to_rgb_int(&tag.color)),
+                tag_name: Set(tag.name.clone()),
+                color: Set(color_value),
                 ordinal: Set(tag.ordinal),
                 category_id: Set(new_category_id),
                 ..Default::default()
@@ -377,9 +368,9 @@ impl Mutation {
             tag_id_map.insert(*orig_tag_id, inserted.id);
         }
 
-        for (orig_col_id, column) in data.columns {
+        for (orig_col_id, column) in &data.columns {
             let model = columns::ActiveModel {
-                name: Set(column.name),
+                name: Set(column.name.clone()),
                 ordinal: Set(column.ordinal),
                 board_id: Set(Some(new_board.id)),
                 ..Default::default()
@@ -388,11 +379,11 @@ impl Mutation {
             column_id_map.insert(*orig_col_id, inserted.id);
         }
 
-        for (_, activity) in data.activities {
-            let new_column_id = activity.column_id.and_then(|id| column_id_map.get(&id).copied());
+        for (_, activity) in &data.activities {
+            let new_column_id = column_id_map.get(&activity.column_id).copied();
             let model = activities::ActiveModel {
-                name: Set(activity.name),
-                body: Set(activity.body),
+                name: Set(activity.name.clone()),
+                body: Set(activity.body.clone()),
                 column_id: Set(new_column_id),
                 ordinal: Set(activity.ordinal),
                 ..Default::default()
@@ -400,10 +391,10 @@ impl Mutation {
             model.insert(&tr).await.context("failed to insert activity")?;
         }
 
-        for (_, activity) in data.other_activities {
+        for (_, activity) in &data.other_activities {
             let model = activities::ActiveModel {
-                name: Set(activity.name),
-                body: Set(activity.body),
+                name: Set(activity.name.clone()),
+                body: Set(activity.body.clone()),
                 column_id: Set(None),
                 ordinal: Set(activity.ordinal),
                 ..Default::default()
