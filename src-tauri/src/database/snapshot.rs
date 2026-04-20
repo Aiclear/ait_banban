@@ -1,5 +1,7 @@
 use anyhow::Context;
-use sea_orm::{DbConn, EntityTrait, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryOrder, Set,
+};
 
 use ::entity::snapshots;
 use crate::errors::AppError;
