@@ -34,19 +34,8 @@
         "resizable": true,
         "width": 1280,
         "height": 800,
-        "visible": false,
-        "label": "main",
-        "useHttpsScheme": true
-      },
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "width": 1280,
-        "height": 800,
-        "decorations": false,
-        "url": "splashscreen.html",
-        "label": "splashscreen",
-        "useHttpsScheme": true
+        "visible": true,
+        "label": "main"
       }
     ],
     "security": {
